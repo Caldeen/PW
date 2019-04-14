@@ -47,7 +47,7 @@ public class Main {
                 czytList.add(czyt);
                 czyt.start();
             }
-
+            lib.passTurn();
             System.out.println("Pisarze: "+pisList.toString());
             System.out.println("Czytelnicy: "+czytList.toString());
             lib.show();

@@ -25,8 +25,16 @@ public class Library {
     public void openTurn(){
         turn=true;
     }
+    public void passTurn(){
+        for(Czytelnik czz:activeReaders)
+            czz.decrTime();
+        activeReaders.removeIf(n->(!n.isRun));
+        for(Pisarz pis:activeWriters)
+            pis.decrTime();
+        activeWriters.removeIf(n->(!n.isRun));
+        turn =false;
+    }
     public synchronized void zajmij(Thread thr) {
-        if(turn) {
             if (thr instanceof Pisarz) {
                 while (!piL.contains(thr)|| isPisarzIn) {
                     for (Czytelnik c : czL) {
@@ -36,9 +44,7 @@ public class Library {
                         }
                     }
                     System.out.println("pisarz in");
-
                     ((Pisarz) thr).isRun = false;
-
                     piL.remove(thr);
                 }
             } else {
@@ -47,24 +53,18 @@ public class Library {
                         thr.wait();
                     } catch (Exception e) {
                     }
-                try {
-                    System.out.println("Czyt in");
-                    isPisarzIn = false;
 
-                    activeReaders.add((Czytelnik) thr);
-                    ((Czytelnik) thr).isReading=true;
-                    turn =false;
-                    for(Czytelnik czz:activeReaders)
-                        czz.decrTime();
+                    try {
+                        System.out.println("Czyt in");
+                        isPisarzIn = false;
+                        activeReaders.add((Czytelnik) thr);
+                        ((Czytelnik) thr).isReading = true;
 
-                        activeReaders.removeIf(n->(!n.isRun));
-
-                    czL.remove(thr);
-                } catch (Exception e) {
-                    System.out.println(e);
-                }
+                        czL.remove(thr);
+                    } catch (Exception e) {
+                        System.out.println(e);
+                    }
             }
-        }
     }
 
 }
