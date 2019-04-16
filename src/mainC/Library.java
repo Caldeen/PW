@@ -1,70 +1,123 @@
 package mainC;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class Library {
-    private int priority=0;
-    private  boolean isPisarzIn;
-    private boolean canReaderCome=true;
-    private boolean turn;
+    public   boolean canPisarzcome;
+    public boolean canReaderCome;
+    public int priority=-1;
+    private int readerWait;
+    private int writerWait;
     private ArrayList<Czytelnik> czL;
     private ArrayList<Pisarz> piL;
     private ArrayList<Czytelnik> activeReaders;
     private ArrayList<Pisarz> activeWriters;
-    public Library(ArrayList<Czytelnik> C,ArrayList<Pisarz> P){
+    public Library(ArrayList<Czytelnik> C,ArrayList<Pisarz> P,ArrayList<Czytelnik> AC,ArrayList<Pisarz> AP){
         czL=C;
         piL=P;
-        isPisarzIn=false;
-        activeReaders=new ArrayList<>();
-        activeWriters=new ArrayList<>();
+        canPisarzcome=false;
+        activeReaders=AC;
+        activeWriters=AP;
     }
     public void show(){
-        System.out.println("czytelnicyt w library: "+activeReaders.size());
+        System.out.println("czytelnicy w library: "+activeReaders.size());
         System.out.println("pisarze w library: "+activeWriters.size());
     }
-    public void openTurn(){
-        turn=true;
-    }
     public void passTurn(){
-        for(Czytelnik czz:activeReaders)
+        for(Czytelnik czz:activeReaders) {
             czz.decrTime();
+        }
         activeReaders.removeIf(n->(!n.isRun));
-        for(Pisarz pis:activeWriters)
+        for(Pisarz pis:activeWriters) {
             pis.decrTime();
+        }
         activeWriters.removeIf(n->(!n.isRun));
-        turn =false;
+        for(Czytelnik c:czL)
+            c.timeWaiting++;
+        for(Pisarz p:piL)
+            p.timeWaiting++;
+        readerWait=0;
+        writerWait=0;
+        Collections.sort( czL,new roll());
+        Collections.sort(piL,new rollp());
+        Czytelnik longestWaitingReader;
+        Pisarz longestWaitingWriter;
+        if(!czL.isEmpty()) {
+            longestWaitingReader = czL.get(0);
+            readerWait=longestWaitingReader.timeWaiting;
+        }
+        if(!piL.isEmpty()) {
+            longestWaitingWriter = piL.get(0);
+            writerWait=longestWaitingWriter.timeWaiting;
+        }
     }
     public synchronized void zajmij(Thread thr) {
             if (thr instanceof Pisarz) {
-                while (!piL.contains(thr)|| isPisarzIn) {
-                    for (Czytelnik c : czL) {
-                        try {
-                            c.wait();
-                        } catch (Exception e) {
-                        }
-                    }
-                    System.out.println("pisarz in");
-                    ((Pisarz) thr).isRun = false;
-                    piL.remove(thr);
-                }
-            } else {
-                while (!canReaderCome||!czL.contains((Czytelnik)thr))
+                while (!((Pisarz) thr).canCome||((Pisarz) thr).isWriting ) {
                     try {
                         thr.wait();
                     } catch (Exception e) {
                     }
-
+                }
+                System.out.println("pisarz in");
+                ((Pisarz) thr).isWriting = true;
+            } else {
+                while (!((Czytelnik)thr).canCome||(((Czytelnik) thr).isReading))
                     try {
-                        System.out.println("Czyt in");
-                        isPisarzIn = false;
-                        activeReaders.add((Czytelnik) thr);
-                        ((Czytelnik) thr).isReading = true;
-
-                        czL.remove(thr);
+                        thr.wait();
                     } catch (Exception e) {
-                        System.out.println(e);
                     }
+                System.out.println("Czyt in");
+                ((Czytelnik) thr).isReading = true;
             }
     }
-
+    public void determineOrder(){
+        canReaderCome=false;
+        canPisarzcome=false;
+        if(!activeWriters.isEmpty()){
+            canPisarzcome=false;
+            canReaderCome=false;
+            return;
+        }
+        if(!activeReaders.isEmpty()){
+            if(priority==-1){
+                canPisarzcome=false;
+                canReaderCome=true;
+                return;
+            }else{
+                canPisarzcome=false;
+                canReaderCome=false;
+                return;
+            }
+        }
+        if(czL.isEmpty()){
+            canPisarzcome=true;
+            canReaderCome=false;
+            return;
+        }
+        if(piL.isEmpty()){
+            canReaderCome=false;
+            canReaderCome=true;
+            return;
+        }
+        if(priority==-1){
+            canReaderCome=true;
+            canPisarzcome=false;
+        }else {
+            canReaderCome=false;
+            canPisarzcome=true;
+        }
+    }
+}
+class roll implements Comparator<Czytelnik>{
+    public int compare(Czytelnik c1,Czytelnik c2){
+        return c2.timeWaiting-c1.timeWaiting;
+    }
+}
+class rollp implements Comparator<Pisarz>{
+    public int compare(Pisarz c1,Pisarz c2){
+        return c2.timeWaiting-c1.timeWaiting;
+    }
 }
